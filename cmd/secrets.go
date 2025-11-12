@@ -21,15 +21,20 @@ var secretsShowCmd = &cobra.Command{
 }
 
 var secretName string
+var secretsSwitchAccount bool
 
 func init() {
 	secretsShowCmd.Flags().StringVar(&secretName, "name", "", "Name of the secret to show directly")
+	secretsShowCmd.Flags().BoolVarP(&secretsSwitchAccount, "switch-account", "s", false, "Switch AWS account before showing secrets")
 	secretsCmd.AddCommand(secretsShowCmd)
 	rootCmd.AddCommand(secretsCmd)
 }
 
 func runSecretsShowCommand(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
+
+	// Track if we just authenticated (to avoid double-login with -s flag)
+	justAuthenticated := false
 
 	// Create secrets manager
 	secretsManager, err := aws.NewSecretsManager(ctx)
@@ -45,6 +50,7 @@ func runSecretsShowCommand(cmd *cobra.Command, args []string) {
 				fmt.Printf("Authentication cancelled\n")
 				os.Exit(1)
 			}
+			justAuthenticated = true
 			// Retry creating manager after successful login
 			secretsManager, err = aws.NewSecretsManager(ctx)
 			if err != nil {
@@ -53,6 +59,20 @@ func runSecretsShowCommand(cmd *cobra.Command, args []string) {
 			}
 		} else {
 			fmt.Printf("Error creating secrets manager: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	// Handle account switching if requested (skip if we just authenticated)
+	if secretsSwitchAccount && !justAuthenticated {
+		if err := handleAccountSwitch(ctx); err != nil {
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
+		// Recreate secrets manager with new credentials
+		secretsManager, err = aws.NewSecretsManager(ctx)
+		if err != nil {
+			fmt.Printf("Error creating secrets manager after account switch: %v\n", err)
 			os.Exit(1)
 		}
 	}

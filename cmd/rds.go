@@ -37,6 +37,9 @@ func init() {
 func runRDSConnect(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 
+	// Track if we just authenticated (to avoid double-login with -s flag)
+	justAuthenticated := false
+
 	// Create RDS manager
 	rdsManager, err := aws.NewRDSManager(ctx)
 	if err != nil {
@@ -51,6 +54,7 @@ func runRDSConnect(cmd *cobra.Command, args []string) {
 				fmt.Printf("Authentication cancelled\n")
 				os.Exit(1)
 			}
+			justAuthenticated = true
 			// Retry creating manager after successful login
 			rdsManager, err = aws.NewRDSManager(ctx)
 			if err != nil {
@@ -63,8 +67,8 @@ func runRDSConnect(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Handle account switching if requested
-	if switchAccount {
+	// Handle account switching if requested (skip if we just authenticated)
+	if switchAccount && !justAuthenticated {
 		if err := handleAccountSwitch(ctx); err != nil {
 			fmt.Printf("%v\n", err)
 			os.Exit(1)

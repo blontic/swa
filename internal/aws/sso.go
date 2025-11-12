@@ -289,7 +289,8 @@ func (s *SSOManager) handleAccountRoleSelection(ctx context.Context, accessToken
 	_ = awscconfig.CleanupStaleSessions()
 
 	fmt.Printf("\nSuccessfully authenticated to %s (%s) as %s\n", *selectedAccount.AccountName, *selectedAccount.AccountId, *selectedRole.RoleName)
-	fmt.Printf("Profile: %s\n", profileName)
-	fmt.Printf("Use with AWS CLI: aws <command> --profile %s\n", profileName)
+	fmt.Printf("\nTo use in this terminal:\n")
+	fmt.Printf("export AWS_PROFILE=%s\n", profileName)
+	fmt.Printf("export AWS_REGION=%s\n", viper.GetString("default_region"))
 	return nil
 }
