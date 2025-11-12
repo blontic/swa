@@ -56,13 +56,8 @@ func createEC2Manager() (*aws.EC2Manager, error) {
 func runEC2Connect(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 
-	// Handle account switching if requested
-	if ec2SwitchAccount {
-		if err := handleAccountSwitch(ctx); err != nil {
-			fmt.Printf("%v\n", err)
-			os.Exit(1)
-		}
-	}
+	// Track if we just authenticated (to avoid double-login with -s flag)
+	justAuthenticated := false
 
 	ec2Manager, err := createEC2Manager()
 	if err != nil {
@@ -77,6 +72,7 @@ func runEC2Connect(cmd *cobra.Command, args []string) {
 				fmt.Printf("Authentication cancelled\n")
 				os.Exit(1)
 			}
+			justAuthenticated = true
 			// Retry creating manager after successful login
 			ec2Manager, err = createEC2Manager()
 			if err != nil {
@@ -85,6 +81,20 @@ func runEC2Connect(cmd *cobra.Command, args []string) {
 			}
 		} else {
 			fmt.Printf("Error creating EC2 manager: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	// Handle account switching if requested (skip if we just authenticated)
+	if ec2SwitchAccount && !justAuthenticated {
+		if err := handleAccountSwitch(ctx); err != nil {
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
+		// Recreate manager with new credentials
+		ec2Manager, err = createEC2Manager()
+		if err != nil {
+			fmt.Printf("Error creating EC2 manager after account switch: %v\n", err)
 			os.Exit(1)
 		}
 	}
@@ -101,13 +111,8 @@ func runEC2Connect(cmd *cobra.Command, args []string) {
 func runEC2RDP(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 
-	// Handle account switching if requested
-	if ec2SwitchAccount {
-		if err := handleAccountSwitch(ctx); err != nil {
-			fmt.Printf("%v\n", err)
-			os.Exit(1)
-		}
-	}
+	// Track if we just authenticated (to avoid double-login with -s flag)
+	justAuthenticated := false
 
 	ec2Manager, err := createEC2Manager()
 	if err != nil {
@@ -122,6 +127,7 @@ func runEC2RDP(cmd *cobra.Command, args []string) {
 				fmt.Printf("Authentication cancelled\n")
 				os.Exit(1)
 			}
+			justAuthenticated = true
 			// Retry creating manager after successful login
 			ec2Manager, err = createEC2Manager()
 			if err != nil {
@@ -130,6 +136,20 @@ func runEC2RDP(cmd *cobra.Command, args []string) {
 			}
 		} else {
 			fmt.Printf("Error creating EC2 manager: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	// Handle account switching if requested (skip if we just authenticated)
+	if ec2SwitchAccount && !justAuthenticated {
+		if err := handleAccountSwitch(ctx); err != nil {
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
+		// Recreate manager with new credentials
+		ec2Manager, err = createEC2Manager()
+		if err != nil {
+			fmt.Printf("Error creating EC2 manager after account switch: %v\n", err)
 			os.Exit(1)
 		}
 	}
